@@ -20,7 +20,7 @@
 namespace apparition {
 
 template<typename T>
-BaseBuffer<T>::BaseBuffer(Vector2i dimensions) {
+BaseBuffer2D<T>::BaseBuffer2D(Vector2i dimensions) {
     this->dimensions = dimensions;
 
     this->data = (T*)std::malloc(sizeof(T) * this->dimensions.x * this->dimensions.y);
@@ -31,16 +31,34 @@ BaseBuffer<T>::BaseBuffer(Vector2i dimensions) {
 }
 
 template<typename T>
-BaseBuffer<T>::~BaseBuffer() {
+BaseBuffer2D<T>::~BaseBuffer2D() {
     std::free(this->data);
 }
 
 template<typename T>
-size_t BaseBuffer<T>::getIndex(Vector2i position) {
+T BaseBuffer2D<T>::get(Vector2i position) {
+    if (position.x < 0 || position.x >= this->dimensions.x || position.y < 0 || position.y >= this->dimensions.y) {
+        throw std::out_of_range("'position' is out of range");
+    }
+
+    return this->data[this->getIndex(position)];
+}
+
+template<typename T>
+void BaseBuffer2D<T>::set(Vector2i position, T value) {
+    if (position.x < 0 || position.x >= this->dimensions.x || position.y < 0 || position.y >= this->dimensions.y) {
+        throw std::out_of_range("'position' is out of range");
+    }
+
+    this->data[this->getIndex(position)] = value;
+}
+
+template<typename T>
+size_t BaseBuffer2D<T>::getIndex(Vector2i position) {
     return (position.y * this->dimensions.x) + position.x;
 }
 
-DepthBuffer::DepthBuffer(Vector2i dimensions) : BaseBuffer(dimensions) {
+DepthBuffer::DepthBuffer(Vector2i dimensions) : BaseBuffer2D(dimensions) {
     for (size_t i = 0; i < this->dimensions.x * this->dimensions.y; ++i) {
         this->data[i] = std::numeric_limits<float>::min();
     }
@@ -58,9 +76,15 @@ FrameBuffer::~FrameBuffer() {
     delete this->depth_buffer;
 }
 
-Renderer::Renderer() {
-
+ColorBuffer* FrameBuffer::getColorBuffer() {
+    return this->color_buffer;
 }
+
+DepthBuffer* FrameBuffer::getDepthBuffer() {
+    return this->depth_buffer;
+}
+
+Renderer::Renderer() {}
 
 void Renderer::bindFrameBuffer(FrameBuffer* to_bind) {
     if (!to_bind) {
@@ -70,7 +94,7 @@ void Renderer::bindFrameBuffer(FrameBuffer* to_bind) {
     this->frame_buffer = to_bind;
 }
 
-void Renderer::bindVertexBuffer(VertexBuffer* to_bind) {
+void Renderer::bindVertexBuffer(std::vector<Vertex>* to_bind) {
     if (!to_bind) {
         throw std::invalid_argument("'to_bind' cannot be nullptr");
     }
@@ -78,7 +102,7 @@ void Renderer::bindVertexBuffer(VertexBuffer* to_bind) {
     this->vertex_buffer = to_bind;
 }
 
-void Renderer::bindIndexBuffer(IndexBuffer* to_bind) {
+void Renderer::bindIndexBuffer(std::vector<size_t>* to_bind) {
     if (!to_bind) {
         throw std::invalid_argument("'to_bind' cannot be nullptr");
     }

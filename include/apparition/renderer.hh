@@ -30,22 +30,24 @@ class Vertex {
 };
 
 template<typename T>
-class BaseBuffer {
+class BaseBuffer2D {
     public:
-        BaseBuffer(Vector2i dimensions);
-        ~BaseBuffer();
+        BaseBuffer2D(Vector2i dimensions);
+        ~BaseBuffer2D();
+        T get(Vector2i position);
+        void set(Vector2i position, T value);
     protected:
         size_t getIndex(Vector2i position);
         Vector2i dimensions;
         T* data;
 };
 
-class ColorBuffer : public BaseBuffer<Vector4f> {
+class ColorBuffer : public BaseBuffer2D<Vector4f> {
     public:
-        ColorBuffer(Vector2i dimensions) : BaseBuffer(dimensions) {}
+        ColorBuffer(Vector2i dimensions) : BaseBuffer2D(dimensions) {}
 };
 
-class DepthBuffer : public BaseBuffer<float> {
+class DepthBuffer : public BaseBuffer2D<float> {
     public:
         DepthBuffer(Vector2i dimensions);
 };
@@ -54,30 +56,24 @@ class FrameBuffer {
     public:
         FrameBuffer(Vector2i dimensions);
         ~FrameBuffer();
+        ColorBuffer* getColorBuffer();
+        DepthBuffer* getDepthBuffer();
     private:
         Vector2i dimensions;
         ColorBuffer* color_buffer;
         DepthBuffer* depth_buffer;
 };
 
-class VertexBuffer {
-    
-};
-
-class IndexBuffer {
-
-};
-
 class Renderer {
     public:
         Renderer();
         void bindFrameBuffer(FrameBuffer* to_bind);
-        void bindVertexBuffer(VertexBuffer* to_bind);
-        void bindIndexBuffer(IndexBuffer* to_bind);
+        void bindVertexBuffer(std::vector<Vertex>* to_bind);
+        void bindIndexBuffer(std::vector<size_t>* to_bind);
     private:
         FrameBuffer* frame_buffer;
-        VertexBuffer* vertex_buffer;
-        IndexBuffer* index_buffer;
+        std::vector<Vertex>* vertex_buffer;
+        std::vector<size_t>* index_buffer;
 };
 
 } // namespace apparition
