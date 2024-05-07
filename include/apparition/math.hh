@@ -18,10 +18,133 @@
 #ifndef APPARITION_MATH_HH
 #define APPARITION_MATH_HH
 
+#include <cmath>
 #include <expected>
 #include <initializer_list>
 
 namespace apparition {
+
+template<typename T, size_t N>
+class Vector {
+    public:
+        Vector();
+        Vector(std::initializer_list<T> data);
+        T& get(size_t i);
+        T& operator[](size_t i);
+        T length();
+        T dot(Vector<T, N>& other);
+    protected:
+        T data[N];
+};
+
+template<typename T, size_t N>
+Vector<T, N>::Vector() {
+    static_assert(std::is_arithmetic_v<T>, "'T' must be an arithmetic type");
+
+    if (N <= 0) {
+        throw std::invalid_argument("Invalid number of elements");
+    }
+
+    for (size_t j = 0; j < N; ++j) {
+        this->data[j] = 0;
+    }
+}
+
+template<typename T, size_t N>
+Vector<T, N>::Vector(std::initializer_list<T> data) {
+    if (data.size() != N) {
+        throw std::invalid_argument("Invalid number of elements");
+    }
+
+    size_t i = 0;
+    for (const auto& element : data) {
+        this->data[i] = element;
+        ++i;
+    }
+}
+
+template<typename T, size_t N>
+T& Vector<T, N>::get(size_t i) {
+    if (i < 0 || i >= N) {
+        throw std::out_of_range("Value for 'i' is out of range");
+    }
+
+    return this->data[i];
+}
+
+template<typename T, size_t N>
+T& Vector<T, N>::operator[](size_t i) {
+    return this->get(i);
+}
+
+template <typename T, size_t N>
+T Vector<T, N>::length() {
+    T squares_sum = 0;
+    for (size_t i = 0; i < N; ++i) {
+        squares_sum += this->data[i] * this->data[i];
+    }
+
+    return std::sqrt(squares_sum);
+}
+
+template<typename T, size_t N>
+T Vector<T, N>::dot(Vector<T, N>& other) {
+    T product = 0;
+
+    for (size_t i = 0; i < N; ++i) {
+        product += this->data[i] * other.data[i];
+    }
+
+    return product;
+}
+
+
+template<typename T>
+class Vector2 : public Vector<T, 2> {
+    public:
+        T& x = Vector<T, 2>::data[0];
+        T& y = Vector<T, 2>::data[1];
+        Vector2() : Vector<T, 2>() {}
+        Vector2(T _x, T _y) : Vector<T, 2>({_x, _y}) {}
+};
+
+template<typename T>
+class Vector3 : public Vector<T, 3> {
+    public:
+        T& x = Vector<T, 3>::data[0];
+        T& y = Vector<T, 3>::data[1];
+        T& z = Vector<T, 3>::data[2];
+        T& r = Vector<T, 3>::data[0];
+        T& g = Vector<T, 3>::data[1];
+        T& b = Vector<T, 3>::data[2];
+        Vector3() : Vector<T, 3>() {}
+        Vector3(T _x, T _y, T _z) : Vector<T, 3>({_x, _y, _z}) {}
+        Vector3<T> cross(Vector3<T>& other);
+};
+
+template<typename T>
+class Vector4 : public Vector<T, 4> {
+    public:
+        T& x = Vector<T, 4>::data[0];
+        T& y = Vector<T, 4>::data[1];
+        T& z = Vector<T, 4>::data[2];
+        T& w = Vector<T, 4>::data[3];
+        T& r = Vector<T, 4>::data[0];
+        T& g = Vector<T, 4>::data[1];
+        T& b = Vector<T, 4>::data[2];
+        T& a = Vector<T, 4>::data[3];
+        Vector4() : Vector<T, 4>() {}
+        Vector4(T _x, T _y, T _z, T _w) : Vector<T, 4>({_x, _y, _z, _w}) {}
+};
+
+template<typename T>
+Vector3<T> Vector3<T>::cross(Vector3<T>& other) {
+    Vector3<T> result;
+    result.x = this->y * other.z - this->z * other.y;
+    result.y = this->z * other.x - this->x * other.z;
+    result.z = this->x * other.y - this->y * other.x;
+    return result;
+}
 
 template<typename T, size_t C>
 class MatrixRow {
@@ -31,32 +154,6 @@ class MatrixRow {
         T& operator[](size_t j);
     private:
         T columns[C];
-};
-
-template<typename T, size_t R, size_t C>
-class Matrix {
-    public:
-        enum class Error {
-            INVERSE_MATRIX_DOES_NOT_EXIST
-        };
-        Matrix();
-        Matrix(std::initializer_list<std::initializer_list<T>> data);
-        static Matrix<T, R, C> identity();
-        T get(size_t i, size_t j);
-        MatrixRow<T, C>& getRow(size_t i);
-        MatrixRow<T, C>& operator[](size_t i);
-        template<size_t N> Matrix<T, R, N> multiply(Matrix<T, C, N>& other);
-        Matrix<T, C, R> transpose();
-        Matrix<T, R, C> rowReduce();
-        Matrix<T, R - 1, C - 1> minors(size_t i, size_t j);
-        T minor(size_t i, size_t j);
-        T cofactor(size_t i, size_t j);
-        Matrix<T, R, C> cofactors();
-        Matrix<T, R, C> adjugate();
-        std::expected<Matrix<T, R, C>, Error> inverse();
-        T determinant();
-    private:
-        MatrixRow<T, C> rows[R];
 };
 
 template<typename T, size_t C>
@@ -85,6 +182,33 @@ template<typename T, size_t C>
 T& MatrixRow<T, C>::operator[](size_t j) {
     return this->getColumn(j);
 }
+
+template<typename T, size_t R, size_t C>
+class Matrix {
+    public:
+        enum class Error {
+            INVERSE_MATRIX_DOES_NOT_EXIST
+        };
+        Matrix();
+        Matrix(std::initializer_list<std::initializer_list<T>> data);
+        static Matrix<T, R, C> identity();
+        T get(size_t i, size_t j);
+        MatrixRow<T, C>& getRow(size_t i);
+        MatrixRow<T, C>& operator[](size_t i);
+        template<size_t N> Matrix<T, R, N> multiply(Matrix<T, C, N>& other);
+        Vector<T, C> multiply(Vector<T, C>& other);
+        Matrix<T, C, R> transpose();
+        Matrix<T, R, C> rowReduce();
+        Matrix<T, R - 1, C - 1> minors(size_t i, size_t j);
+        T minor(size_t i, size_t j);
+        T cofactor(size_t i, size_t j);
+        Matrix<T, R, C> cofactors();
+        Matrix<T, R, C> adjugate();
+        std::expected<Matrix<T, R, C>, Error> inverse();
+        T determinant();
+    private:
+        MatrixRow<T, C> rows[R];
+};
 
 template<typename T, size_t R, size_t C>
 Matrix<T, R, C>::Matrix() {

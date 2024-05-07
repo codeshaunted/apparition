@@ -20,7 +20,23 @@
 #include "apparition/math.hh"
 
 int main() {
-    apparition::Matrix3x3f matrix{
+    apparition::Vector3<float> test(1, 2, 3);
+    apparition::Vector3<float> test2(4, 5, 6);
+    auto testcross = test.cross(test2);
+
+    std::cout << test.x << std::endl;
+    std::cout << test.y << std::endl;
+    std::cout << test.z << std::endl;
+    std::cout << test2.x << std::endl;
+    std::cout << test2.y << std::endl;
+    std::cout << test2.z << std::endl;
+    std::cout << testcross.r << std::endl;
+    std::cout << testcross.g << std::endl;
+    std::cout << testcross.b << std::endl;
+
+    std::cout << test.length() << std::endl;
+
+    /*apparition::Matrix3x3f matrix{
         {-1.0f, 2.0f, -1.0f},
         {-2.0f, 0.0f, 1.0f},
         {1.0f, -1.0f, 0.0f}
@@ -38,7 +54,7 @@ int main() {
     }
 
     std::cout << inverse.determinant() << std::endl;
-    std::cout << matrix.determinant() << std::endl;
+    std::cout << matrix.determinant() << std::endl;*/
 
     return 0;
 }
