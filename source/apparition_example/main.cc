@@ -26,12 +26,13 @@ int main() {
         {7.0f, 8.0f, 9.0f}
     };
 
-    apparition::Matrix<float, 3, 3> identity = apparition::Matrix<float, 3, 3>::identity();
-    auto inverse = identity.inverse();
+    apparition::Matrix<float, 2, 3> A = { {1, 2, 3}, {4, 5, 6} };
+    apparition::Matrix<float, 3, 2> B = { {7, 8}, {9, 10}, {11, 12} };
+    apparition::Matrix<float, 2, 2> C = A.multiply(B);
     
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 2; ++i) {
         for (int j = 0; j < 3; ++j) {
-            std::cout << identity[i][j] << " ";
+            std::cout << A[i][j] << " ";
         }
 
         std::cout << std::endl;
@@ -40,15 +41,22 @@ int main() {
     std::cout << std::endl;
 
     for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            std::cout << (*inverse)[i][j] << " ";
+        for (int j = 0; j < 2; ++j) {
+            std::cout << B[i][j] << " ";
         }
 
         std::cout << std::endl;
     }
 
     std::cout << std::endl;
-    std::cout << matrix.determinant();
+
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            std::cout << C[i][j] << " ";
+        }
+
+        std::cout << std::endl;
+    }
 
     return 0;
 }

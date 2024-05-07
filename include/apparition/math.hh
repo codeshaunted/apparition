@@ -45,6 +45,7 @@ class Matrix {
         T get(size_t i, size_t j);
         MatrixRow<T, C>& getRow(size_t i);
         MatrixRow<T, C>& operator[](size_t i);
+        template<size_t N> Matrix<T, R, N> multiply(Matrix<T, C, N>& other);
         Matrix<T, R, C> rowReduce();
         Matrix<T, R - 1, C - 1> minor(size_t i, size_t j);
         Matrix<T, R, C> adjugate();
@@ -138,6 +139,24 @@ MatrixRow<T, C>& Matrix<T, R, C>::getRow(size_t i) {
 template<typename T, size_t R, size_t C>
 MatrixRow<T, C>& Matrix<T, R, C>::operator[](size_t i) {
     return this->getRow(i);
+}
+
+template<typename T, size_t R, size_t C>
+template<size_t N>
+Matrix<T, R, N> Matrix<T, R, C>::multiply(Matrix<T, C, N>& other) {
+    Matrix<T, R, N> result;
+
+    for (size_t i = 0; i < R; ++i) {
+        for (size_t j = 0; j < N; ++j) {
+            T sum = 0;
+            for (size_t k = 0; k < C; ++k) {
+                sum += this->rows[i][k] * other[k][j];
+            }
+            result[i][j] = sum;
+        }
+    }
+
+    return result;
 }
 
 template<typename T, size_t R, size_t C>
