@@ -46,8 +46,12 @@ class Matrix {
         MatrixRow<T, C>& getRow(size_t i);
         MatrixRow<T, C>& operator[](size_t i);
         template<size_t N> Matrix<T, R, N> multiply(Matrix<T, C, N>& other);
+        Matrix<T, C, R> transpose();
         Matrix<T, R, C> rowReduce();
-        Matrix<T, R - 1, C - 1> minor(size_t i, size_t j);
+        Matrix<T, R - 1, C - 1> minors(size_t i, size_t j);
+        T minor(size_t i, size_t j);
+        T cofactor(size_t i, size_t j);
+        Matrix<T, R, C> cofactors();
         Matrix<T, R, C> adjugate();
         std::expected<Matrix<T, R, C>, Error> inverse();
         T determinant();
@@ -160,6 +164,19 @@ Matrix<T, R, N> Matrix<T, R, C>::multiply(Matrix<T, C, N>& other) {
 }
 
 template<typename T, size_t R, size_t C>
+Matrix<T, C, R> Matrix<T, R, C>::transpose() {
+    Matrix<T, C, R> transposed;
+
+    for (size_t i = 0; i < R; ++i) {
+        for (size_t j = 0; j < C; ++j) {
+            transposed[j][i] = this->rows[i][j];
+        }
+    }
+
+    return transposed;
+}
+
+template<typename T, size_t R, size_t C>
 Matrix<T, R, C> Matrix<T, R, C>::rowReduce() {
     Matrix<T, R, C> result = *this;
 
@@ -209,8 +226,10 @@ Matrix<T, R, C> Matrix<T, R, C>::rowReduce() {
 }
 
 template<typename T, size_t R, size_t C>
-Matrix<T, R - 1, C - 1> Matrix<T, R, C>::minor(size_t i, size_t j) {
-    Matrix<T, R - 1, C - 1> minor_matrix;
+Matrix<T, R - 1, C - 1> Matrix<T, R, C>::minors(size_t i, size_t j) {
+    static_assert(R == C, "Minors are only defined for square matrices");
+
+    Matrix<T, R - 1, C - 1> minors;
 
     size_t minor_row = 0;
     for (size_t r = 0; r < R; ++r) {
@@ -218,29 +237,50 @@ Matrix<T, R - 1, C - 1> Matrix<T, R, C>::minor(size_t i, size_t j) {
         size_t minor_column = 0;
         for (size_t c = 0; c < C; ++c) {
             if (c == j) continue;
-            minor_matrix[minor_row][minor_column] = this->rows[r][c];
+            minors[minor_row][minor_column] = this->rows[r][c];
             ++minor_column;
         }
         ++minor_row;
     }
 
-    return minor_matrix;
+    return minors;
+}
+
+template<typename T, size_t R, size_t C>
+T Matrix<T, R, C>::minor(size_t i, size_t j) {
+    static_assert(R == C, "Minor is only defined for square matrices");
+
+    return this->minors(i, j).determinant();
+}
+
+template<typename T, size_t R, size_t C>
+T Matrix<T, R, C>::cofactor(size_t i, size_t j) {
+    static_assert(R == C, "Cofactor is only defined for square matrices");
+
+    T minor = this->minor(i, j);
+    T cofactor = (i + j) % 2 == 0 ? minor : minor * -1;
+    return cofactor;
+}
+
+template<typename T, size_t R, size_t C>
+Matrix<T, R, C> Matrix<T, R, C>::cofactors() {
+    static_assert(R == C, "Cofactors are only defined for square matrices");
+
+    Matrix<T, R, C> result;
+    for (size_t i = 0; i < R; ++i) {
+        for (size_t j = 0; j < C; ++j) {
+            result[i][j] = this->cofactor(i, j);
+        }
+    }
+
+    return result;
 }
 
 template<typename T, size_t R, size_t C>
 Matrix<T, R, C> Matrix<T, R, C>::adjugate() {
-    Matrix<T, R, C> adjugate;
+    static_assert(R == C, "Adjugate is only defined for square matrices");
 
-    for (size_t i = 0; i < R; ++i) {
-        for (size_t j = 0; j < C; ++j) {
-            Matrix<T, R - 1, C - 1> minor = this->minor(i, j);
-            T cofactor = minor.determinant() * ((i + j) % 2 == 0 ? 1 : -1);
-            // place the cofactor in the adjugate matrix (transposed)
-            adjugate[j][i] = cofactor;
-        }
-    }
-
-    return adjugate;
+    return this->cofactors().transpose();
 }
 
 template<typename T, size_t R, size_t C>
@@ -271,15 +311,64 @@ template<typename T, size_t R, size_t C>
 T Matrix<T, R, C>::determinant() {
     static_assert(R == C, "The determinant is only defined for square matrices");
 
-    Matrix<T, R, C> reduced = this->rowReduce();
-
+    Matrix<T, R, C> reduction = *this;
     float determinant = 1.0f;
+
+    size_t lead = 0;
+    for (size_t r = 0; r < R; ++r) {
+        if (C <= lead)
+            break;
+
+        size_t i = r;
+        while (reduction[i][lead] == 0) {
+            ++i;
+            if (R == i) {
+                i = r;
+                ++lead;
+                if (C == lead)
+                    break;
+            }
+        }
+
+        if (C == lead)
+            break;
+
+        if (i != r) {
+            std::swap(reduction[i], reduction[r]);
+            determinant *= -1.0f;
+        }
+
+        T val = reduction[r][lead];
+        if (val != 0) {
+            for (size_t j = 0; j < C; ++j) {
+                reduction[r][j] /= val;
+            }
+            determinant *= val;
+        }
+
+        for (size_t k = 0; k < R; ++k) {
+            if (k != r) {
+                T factor = reduction[k][lead];
+                for (size_t j = 0; j < C; ++j) {
+                    reduction[k][j] -= factor * reduction[r][j];
+                }
+            }
+        }
+
+        ++lead;
+    }
+
     for (size_t i = 0; i < R; ++i) {
-        determinant *= reduced[i][i];
+        determinant *= reduction[i][i];
     }
 
     return determinant;
 }
+
+typedef Matrix<float, 3, 1> Vector3f;
+typedef Matrix<float, 4, 1> Vector4f;
+typedef Matrix<float, 3, 3> Matrix3x3f;
+typedef Matrix<float, 4, 4> Matrix4x4f;
 
 } // namespace apparition
 

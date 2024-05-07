@@ -20,43 +20,25 @@
 #include "apparition/math.hh"
 
 int main() {
-    apparition::Matrix<float, 3, 3> matrix{
-        {1.0f, 2.0f, 3.0f},
-        {4.0f, 5.0f, 6.0f},
-        {7.0f, 8.0f, 9.0f}
+    apparition::Matrix3x3f matrix{
+        {-1.0f, 2.0f, -1.0f},
+        {-2.0f, 0.0f, 1.0f},
+        {1.0f, -1.0f, 0.0f}
     };
 
-    apparition::Matrix<float, 2, 3> A = { {1, 2, 3}, {4, 5, 6} };
-    apparition::Matrix<float, 3, 2> B = { {7, 8}, {9, 10}, {11, 12} };
-    apparition::Matrix<float, 2, 2> C = A.multiply(B);
+    auto inverse = *matrix.inverse();
+    auto C = matrix.multiply(inverse);
     
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            std::cout << A[i][j] << " ";
-        }
-
-        std::cout << std::endl;
-    }
-
-    std::cout << std::endl;
-
     for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 2; ++j) {
-            std::cout << B[i][j] << " ";
-        }
-
-        std::cout << std::endl;
-    }
-
-    std::cout << std::endl;
-
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 2; ++j) {
+        for (int j = 0; j < 3; ++j) {
             std::cout << C[i][j] << " ";
         }
 
         std::cout << std::endl;
     }
+
+    std::cout << inverse.determinant() << std::endl;
+    std::cout << matrix.determinant() << std::endl;
 
     return 0;
 }
