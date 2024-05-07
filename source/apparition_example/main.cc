@@ -17,7 +17,7 @@
 
 #include <iostream>
 
-#include "apparition/math.hh"
+#include "apparition/renderer.hh"
 
 int main() {
     apparition::Vector3<float> test(1, 2, 3);

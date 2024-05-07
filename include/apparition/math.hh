@@ -21,6 +21,7 @@
 #include <cmath>
 #include <expected>
 #include <initializer_list>
+#include <stdexcept>
 
 namespace apparition {
 
@@ -106,7 +107,18 @@ class Vector2 : public Vector<T, 2> {
         T& y = Vector<T, 2>::data[1];
         Vector2() : Vector<T, 2>() {}
         Vector2(T _x, T _y) : Vector<T, 2>({_x, _y}) {}
+        Vector2(const Vector<T, 2>& other) : Vector<T, 2>(other) {}
+        Vector2<T>& operator=(const Vector2<T>& other);
 };
+
+template<typename T>
+Vector2<T>& Vector2<T>::operator=(const Vector2<T>& other) {
+    if (this != &other) {
+        Vector<T, 2>::operator=(other);
+    }
+
+    return *this;
+}
 
 template<typename T>
 class Vector3 : public Vector<T, 3> {
@@ -120,7 +132,27 @@ class Vector3 : public Vector<T, 3> {
         Vector3() : Vector<T, 3>() {}
         Vector3(T _x, T _y, T _z) : Vector<T, 3>({_x, _y, _z}) {}
         Vector3<T> cross(Vector3<T>& other);
+        Vector3(const Vector<T, 3>& other) : Vector<T, 3>(other) {}
+        Vector3<T>& operator=(const Vector3<T>& other);
 };
+
+template<typename T>
+Vector3<T>& Vector3<T>::operator=(const Vector3<T>& other) {
+    if (this != &other) {
+        Vector<T, 3>::operator=(other);
+    }
+
+    return *this;
+}
+
+template<typename T>
+Vector3<T> Vector3<T>::cross(Vector3<T>& other) {
+    Vector3<T> result;
+    result.x = this->y * other.z - this->z * other.y;
+    result.y = this->z * other.x - this->x * other.z;
+    result.z = this->x * other.y - this->y * other.x;
+    return result;
+}
 
 template<typename T>
 class Vector4 : public Vector<T, 4> {
@@ -135,15 +167,17 @@ class Vector4 : public Vector<T, 4> {
         T& a = Vector<T, 4>::data[3];
         Vector4() : Vector<T, 4>() {}
         Vector4(T _x, T _y, T _z, T _w) : Vector<T, 4>({_x, _y, _z, _w}) {}
+        Vector4(const Vector<T, 4>& other) : Vector<T, 4>(other) {}
+        Vector4<T>& operator=(const Vector4<T>& other);
 };
 
 template<typename T>
-Vector3<T> Vector3<T>::cross(Vector3<T>& other) {
-    Vector3<T> result;
-    result.x = this->y * other.z - this->z * other.y;
-    result.y = this->z * other.x - this->x * other.z;
-    result.z = this->x * other.y - this->y * other.x;
-    return result;
+Vector4<T>& Vector4<T>::operator=(const Vector4<T>& other) {
+    if (this != &other) {
+        Vector<T, 4>::operator=(other);
+    }
+
+    return *this;
 }
 
 template<typename T, size_t C>
@@ -489,8 +523,10 @@ T Matrix<T, R, C>::determinant() {
     return determinant;
 }
 
-typedef Matrix<float, 3, 1> Vector3f;
-typedef Matrix<float, 4, 1> Vector4f;
+typedef Vector2<int> Vector2i;
+typedef Vector2<float> Vector2f;
+typedef Vector3<float> Vector3f;
+typedef Vector4<float> Vector4f;
 typedef Matrix<float, 3, 3> Matrix3x3f;
 typedef Matrix<float, 4, 4> Matrix4x4f;
 

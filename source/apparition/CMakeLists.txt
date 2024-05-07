@@ -16,7 +16,8 @@
 # limitations under the License.
 
 set(APPARITION_SOURCE_FILES
-	"${CMAKE_CURRENT_SOURCE_DIR}/math.cc")
+	"${CMAKE_CURRENT_SOURCE_DIR}/math.cc"
+	"${CMAKE_CURRENT_SOURCE_DIR}/renderer.cc")
 
 set(APPARITION_INCLUDE_DIRECTORIES
 	"${CMAKE_SOURCE_DIR}/include/apparition")
