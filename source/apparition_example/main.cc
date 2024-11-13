@@ -16,45 +16,104 @@
 // limitations under the License.
 
 #include <iostream>
+#include <fstream>
 
-#include "apparition/renderer.hh"
+#include "renderer.hh"
+#include "shader.hh"
 
-int main() {
-    apparition::Vector3<float> test(1, 2, 3);
-    apparition::Vector3<float> test2(4, 5, 6);
-    auto testcross = test.cross(test2);
+using namespace apparition;
 
-    std::cout << test.x << std::endl;
-    std::cout << test.y << std::endl;
-    std::cout << test.z << std::endl;
-    std::cout << test2.x << std::endl;
-    std::cout << test2.y << std::endl;
-    std::cout << test2.z << std::endl;
-    std::cout << testcross.r << std::endl;
-    std::cout << testcross.g << std::endl;
-    std::cout << testcross.b << std::endl;
+// Define the TGA header structure
+#pragma pack(push, 1)
+struct TGAHeader {
+    uint8_t id_length;
+    uint8_t color_map_type;
+    uint8_t image_type;
+    uint16_t color_map_origin;
+    uint16_t color_map_length;
+    uint8_t color_map_depth;
+    uint16_t x_origin;
+    uint16_t y_origin;
+    uint16_t width;
+    uint16_t height;
+    uint8_t bits_per_pixel;
+    uint8_t image_descriptor;
+};
+#pragma pack(pop)
 
-    std::cout << test.length() << std::endl;
-
-    /*apparition::Matrix3x3f matrix{
-        {-1.0f, 2.0f, -1.0f},
-        {-2.0f, 0.0f, 1.0f},
-        {1.0f, -1.0f, 0.0f}
-    };
-
-    auto inverse = *matrix.inverse();
-    auto C = matrix.multiply(inverse);
-    
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            std::cout << C[i][j] << " ";
-        }
-
-        std::cout << std::endl;
+void saveFrameBufferToTGA(const char* filename, ColorBuffer* colorBuffer) {
+    if (!colorBuffer) {
+        std::cerr << "Color buffer is nullptr." << std::endl;
+        return;
     }
 
-    std::cout << inverse.determinant() << std::endl;
-    std::cout << matrix.determinant() << std::endl;*/
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        return;
+    }
+
+    // Write the TGA header
+    TGAHeader header;
+    std::memset(&header, 0, sizeof(TGAHeader));
+    header.image_type = 2; // Uncompressed true-color image
+    header.width = static_cast<uint16_t>(colorBuffer->getDimensions().x);
+    header.height = static_cast<uint16_t>(colorBuffer->getDimensions().y);
+    header.bits_per_pixel = 32; // 4 bytes per pixel (RGBA)
+    file.write(reinterpret_cast<char*>(&header), sizeof(TGAHeader));
+
+    // Write pixel data (RGBA) to the file
+    const Vector2u dimensions = colorBuffer->getDimensions();
+    const Vector4f* pixels = colorBuffer->getData();
+    for (size_t y = 0; y < dimensions.y; ++y) {
+        for (size_t x = 0; x < dimensions.x; ++x) {
+            const Vector4f& pixel = pixels[y * dimensions.x + x];
+            // TGA format stores pixel data in BGRA order
+            const uint8_t rgba[4] = {
+                static_cast<uint8_t>(pixel.b * 255), // Blue
+                static_cast<uint8_t>(pixel.g * 255), // Green
+                static_cast<uint8_t>(pixel.r * 255), // Red
+                static_cast<uint8_t>(pixel.a * 255)  // Alpha
+            };
+            file.write(reinterpret_cast<const char*>(&rgba), sizeof(rgba));
+        }
+    }
+
+    file.close();
+    std::cout << "TGA file saved: " << filename << std::endl;
+}
+
+class MyShader : public Shader {
+    public:
+        void runVertex() override {
+        }
+
+        void runFragment() override {
+            this->out_fragment_color = this->varying_vertex_color;
+        }
+};
+
+int main() {
+    Vector2u dimensions(32, 32);
+    FrameBuffer frame_buffer(dimensions);
+    std::vector<Vertex> vertex_buffer{
+        Vertex(Vector4f(0.0f, 0.0f, 0.0f, 0.0f), Vector4f(0.0f, 0.0f, 1.0f, 1.0f)),
+        Vertex(Vector4f(0.5f, 1.0f, 0.0f, 0.0f), Vector4f(1.0f, 0.0f, 0.0f, 1.0f)),
+        Vertex(Vector4f(1.0f, 0.0f, 0.0f, 0.0f), Vector4f(0.0f, 1.0f, 0.0f, 1.0f))
+    };
+    std::vector<size_t> index_buffer{
+        0, 1, 1, 2, 0, 2
+    };
+    MyShader shader;
+
+    Renderer renderer;
+    renderer.bindFrameBuffer(&frame_buffer);
+    renderer.bindVertexBuffer(&vertex_buffer);
+    renderer.bindIndexBuffer(&index_buffer);
+    renderer.bindShader(&shader);
+    renderer.drawLines();
+
+    saveFrameBufferToTGA("output.tga", frame_buffer.getColorBuffer());
 
     return 0;
 }

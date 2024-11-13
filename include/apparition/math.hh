@@ -34,6 +34,12 @@ class Vector {
         T& operator[](size_t i);
         T length();
         T dot(Vector<T, N>& other);
+        Vector<T, N> scale(T scalar);
+        Vector<T, N> operator*(T scalar);
+        Vector<T, N> add(Vector<T, N>& addend);
+        Vector<T, N> operator+(Vector<T, N>& addend);
+        Vector<T, N> subtract(Vector<T, N>& subtrahend);
+        Vector<T, N> operator-(Vector<T, N>& subtrahend);
     protected:
         T data[N];
 };
@@ -99,6 +105,48 @@ T Vector<T, N>::dot(Vector<T, N>& other) {
     return product;
 }
 
+template<typename T, size_t N>
+Vector<T, N> Vector<T, N>::scale(T scalar) {
+    Vector<T, N> result;
+
+    for (size_t i = 0; i < N; ++i) {
+        result[i] = this->data[i] * scalar;
+    }
+
+    return result;
+}
+
+template<typename T, size_t N>
+Vector<T, N> Vector<T, N>::operator*(T scalar) {
+    return this->scale(scalar);
+}
+
+template<typename T, size_t N>
+Vector<T, N> Vector<T, N>::add(Vector<T, N>& addend) {
+    Vector<T, N> result;
+
+    for (size_t i = 0; i < N; ++i) {
+        result[i] = this->data[i] + addend[i];
+    }
+
+    return result;
+}
+
+template<typename T, size_t N>
+Vector<T, N> Vector<T, N>::operator+(Vector<T, N>& addend) {
+    return this->add(addend);
+}
+
+template<typename T, size_t N>
+Vector<T, N> Vector<T, N>::subtract(Vector<T, N>& subtrahend) {
+    Vector<T, N> negative = subtrahend.scale(-1);
+    return this->add(negative);
+}
+
+template<typename T, size_t N>
+Vector<T, N> Vector<T, N>::operator-(Vector<T, N>& subtrahend) {
+    return this->subtract(subtrahend);
+}
 
 template<typename T>
 class Vector2 : public Vector<T, 2> {
@@ -322,6 +370,21 @@ Matrix<T, R, N> Matrix<T, R, C>::multiply(Matrix<T, C, N>& other) {
 }
 
 template<typename T, size_t R, size_t C>
+Vector<T, C> Matrix<T, R, C>::multiply(Vector<T, C>& other) {
+    Vector<T, C> result;
+
+    for (size_t i = 0; i < R; ++i) {
+        T sum = 0;
+        for (size_t j = 0; j < C; ++j) {
+            sum += this->rows[i][j] * other[j];
+        }
+        result[i] = sum;
+    }
+
+    return result;
+}
+
+template<typename T, size_t R, size_t C>
 Matrix<T, C, R> Matrix<T, R, C>::transpose() {
     Matrix<T, C, R> transposed;
 
@@ -523,6 +586,7 @@ T Matrix<T, R, C>::determinant() {
     return determinant;
 }
 
+typedef Vector2<uint32_t> Vector2u;
 typedef Vector2<int> Vector2i;
 typedef Vector2<float> Vector2f;
 typedef Vector3<float> Vector3f;

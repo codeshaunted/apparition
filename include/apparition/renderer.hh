@@ -24,45 +24,108 @@
 
 namespace apparition {
 
-class Vertex {
-    Vector3f position;
+struct Vertex {
+    Vector4f position;
     Vector4f color;
+};
+
+struct Primitive {};
+
+struct Line : public Primitive {
+    Line(Vertex _vertex_0, Vertex _vertex_1) : vertex_0(_vertex_0), vertex_1(_vertex_1) {}
+    Vertex vertex_0;
+    Vertex vertex_1;
+};
+
+struct Fragment {
+    float depth = std::numeric_limits<float>::min();
+    float t;
+    Primitive* primitive = nullptr;
 };
 
 template<typename T>
 class BaseBuffer2D {
     public:
-        BaseBuffer2D(Vector2i dimensions);
+        BaseBuffer2D(Vector2u dimensions);
         ~BaseBuffer2D();
-        T get(Vector2i position);
-        void set(Vector2i position, T value);
+        Vector2u getDimensions();
+        T* getData();
+        T& get(Vector2u position);
+        void set(Vector2u position, T value);
     protected:
-        size_t getIndex(Vector2i position);
-        Vector2i dimensions;
+        size_t getIndex(Vector2u position);
+        Vector2u dimensions;
         T* data;
 };
 
+template<typename T>
+BaseBuffer2D<T>::BaseBuffer2D(Vector2u dimensions) {
+    this->dimensions = dimensions;
+    this->data = new T[dimensions.x * dimensions.y];
+}
+
+template<typename T>
+BaseBuffer2D<T>::~BaseBuffer2D() {
+    delete[] this->data;
+}
+
+template<typename T>
+Vector2u BaseBuffer2D<T>::getDimensions() {
+    return this->dimensions;
+}
+
+template<typename T>
+T* BaseBuffer2D<T>::getData() {
+    return this->data;
+}
+
+template<typename T>
+T& BaseBuffer2D<T>::get(Vector2u position) {
+    if (position.x < 0 || position.x >= this->dimensions.x || position.y < 0 || position.y >= this->dimensions.y) {
+        throw std::out_of_range("'position' is out of range");
+    }
+
+    return this->data[this->getIndex(position)];
+}
+
+template<typename T>
+void BaseBuffer2D<T>::set(Vector2u position, T value) {
+    if (position.x < 0 || position.x >= this->dimensions.x || position.y < 0 || position.y >= this->dimensions.y) {
+        throw std::out_of_range("'position' is out of range");
+    }
+
+    this->data[this->getIndex(position)] = value;
+}
+
+template<typename T>
+size_t BaseBuffer2D<T>::getIndex(Vector2u position) {
+    return (position.y * this->dimensions.x) + position.x;
+}
+
 class ColorBuffer : public BaseBuffer2D<Vector4f> {
     public:
-        ColorBuffer(Vector2i dimensions) : BaseBuffer2D(dimensions) {}
+        ColorBuffer(Vector2u dimensions) : BaseBuffer2D(dimensions) {}
 };
 
-class DepthBuffer : public BaseBuffer2D<float> {
+class DepthBuffer : public BaseBuffer2D<Fragment> {
     public:
-        DepthBuffer(Vector2i dimensions);
+        DepthBuffer(Vector2u dimensions) : BaseBuffer2D(dimensions) {}
 };
 
 class FrameBuffer {
     public:
-        FrameBuffer(Vector2i dimensions);
+        FrameBuffer(Vector2u dimensions);
         ~FrameBuffer();
+        Vector2u getDimensions();
         ColorBuffer* getColorBuffer();
         DepthBuffer* getDepthBuffer();
     private:
-        Vector2i dimensions;
+        Vector2u dimensions;
         ColorBuffer* color_buffer;
         DepthBuffer* depth_buffer;
 };
+
+class Shader;
 
 class Renderer {
     public:
@@ -70,10 +133,15 @@ class Renderer {
         void bindFrameBuffer(FrameBuffer* to_bind);
         void bindVertexBuffer(std::vector<Vertex>* to_bind);
         void bindIndexBuffer(std::vector<size_t>* to_bind);
+        void bindShader(Shader* to_bind);
+        void drawLines();
     private:
         FrameBuffer* frame_buffer;
         std::vector<Vertex>* vertex_buffer;
         std::vector<size_t>* index_buffer;
+        Shader* shader;
+        void runVertexShader(Vertex& in_vertex);
+        void runFragmentShader(Vector2u in_fragment_position, Fragment in_fragment);
 };
 
 } // namespace apparition
