@@ -18,6 +18,7 @@
 #ifndef APPARITION_RENDERER_HH
 #define APPARITION_RENDERER_HH
 
+#include <variant>
 #include <vector>
 
 #include "math.hh"
@@ -29,17 +30,35 @@ struct Vertex {
     Vector4f color;
 };
 
-struct Primitive {};
+enum class PrimitiveType {
+    LINE,
+    TRI
+};
 
-struct Line : public Primitive {
-    Line(Vertex _vertex_0, Vertex _vertex_1) : vertex_0(_vertex_0), vertex_1(_vertex_1) {}
+struct Primitive {
+    Primitive(PrimitiveType _type) : type(_type) {}
+    PrimitiveType type;
+};
+
+struct Line : Primitive {
+    Line(Vertex _vertex_0, Vertex _vertex_1) : Primitive(PrimitiveType::LINE), vertex_0(_vertex_0), vertex_1(_vertex_1) {}
     Vertex vertex_0;
     Vertex vertex_1;
+};
+
+struct Tri : Primitive {
+    Tri(Vertex _vertex_0, Vertex _vertex_1, Vertex _vertex_2) : Primitive(PrimitiveType::TRI), vertex_0(_vertex_0), vertex_1(_vertex_1), vertex_2(_vertex_2) {}
+    Vertex vertex_0;
+    Vertex vertex_1;
+    Vertex vertex_2;
 };
 
 struct Fragment {
     float depth = std::numeric_limits<float>::min();
     float t;
+    float b0;
+    float b1;
+    float b2;
     Primitive* primitive = nullptr;
 };
 
@@ -135,6 +154,7 @@ class Renderer {
         void bindIndexBuffer(std::vector<size_t>* to_bind);
         void bindShader(Shader* to_bind);
         void drawLines();
+        void drawTris();
     private:
         FrameBuffer* frame_buffer;
         std::vector<Vertex>* vertex_buffer;

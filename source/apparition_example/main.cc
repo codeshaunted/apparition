@@ -94,15 +94,16 @@ class MyShader : public Shader {
 };
 
 int main() {
-    Vector2u dimensions(32, 32);
+    Vector2u dimensions(800, 600);
     FrameBuffer frame_buffer(dimensions);
     std::vector<Vertex> vertex_buffer{
         Vertex(Vector4f(0.0f, 0.0f, 0.0f, 0.0f), Vector4f(0.0f, 0.0f, 1.0f, 1.0f)),
         Vertex(Vector4f(0.5f, 1.0f, 0.0f, 0.0f), Vector4f(1.0f, 0.0f, 0.0f, 1.0f)),
-        Vertex(Vector4f(1.0f, 0.0f, 0.0f, 0.0f), Vector4f(0.0f, 1.0f, 0.0f, 1.0f))
+        Vertex(Vector4f(1.0f, 0.0f, 0.0f, 0.0f), Vector4f(0.0f, 1.0f, 0.0f, 1.0f)),
+        Vertex(Vector4f(1.0f, 1.0f, 0.0f, 0.0f), Vector4f(0.0f, 0.0f, 1.0f, 1.0f))
     };
     std::vector<size_t> index_buffer{
-        0, 1, 1, 2, 0, 2
+        0, 1, 2, 1, 2, 3
     };
     MyShader shader;
 
@@ -111,7 +112,7 @@ int main() {
     renderer.bindVertexBuffer(&vertex_buffer);
     renderer.bindIndexBuffer(&index_buffer);
     renderer.bindShader(&shader);
-    renderer.drawLines();
+    renderer.drawTris();
 
     saveFrameBufferToTGA("output.tga", frame_buffer.getColorBuffer());
 

@@ -17,7 +17,6 @@
 
 #include "renderer.hh"
 #include "shader.hh"
-#include <iostream>
 
 namespace apparition {
 
@@ -148,7 +147,7 @@ void Renderer::drawLines() {
 
         for (;;) {
             Fragment& fragment = this->frame_buffer->getDepthBuffer()->get(Vector2u(x0, y0));
-            fragment.primitive = &line;
+            fragment.primitive = static_cast<Primitive*>(&line);
 
             float current_distance = std::sqrt((x0 - original_x0) * (x0 - original_x0) + (y0 - original_y0) * (y0 - original_y0));
             fragment.t = current_distance / total_distance;
@@ -166,6 +165,89 @@ void Renderer::drawLines() {
             if (e2 <= dx) {
                 error += dx;
                 y0 += sy;
+            }
+        }
+    }
+
+    for (size_t i = 0; i < dimensions.x; ++i) {
+        for (size_t j = 0; j < dimensions.y; ++j) {
+            Vector2u fragment_position = Vector2u(i, j);
+            Fragment& fragment = this->frame_buffer->getDepthBuffer()->get(fragment_position);
+
+            this->runFragmentShader(fragment_position, fragment);
+            this->frame_buffer->getColorBuffer()->set(fragment_position, this->shader->out_fragment_color);
+        }
+    }
+}
+
+void Renderer::drawTris() {
+    if (!this->frame_buffer) {
+        throw std::logic_error("No frame buffer bound");
+    }
+    if (!this->vertex_buffer) {
+        throw std::logic_error("No vertex buffer bound");
+    }
+    if (!this->index_buffer) {
+        throw std::logic_error("No index buffer bound");
+    }
+    if (!this->shader) {
+        throw std::logic_error("No shader bound");
+    }
+
+    if (this->index_buffer->size() % 3 != 0) {
+        throw std::invalid_argument("Index buffer size must be divisible by 3");
+    }
+
+    Vector2u dimensions = this->frame_buffer->getDimensions();
+
+    std::vector<Tri> tris;
+    for (size_t i = 0; i < this->index_buffer->size(); i += 3) {
+        size_t index_0 = this->index_buffer->at(i);
+        size_t index_1 = this->index_buffer->at(i + 1);
+        size_t index_2 = this->index_buffer->at(i + 2);
+
+        if (index_0 < 0 || index_0 >= this->vertex_buffer->size() || index_1 < 0 || index_1 >= this->vertex_buffer->size() || index_2 < 0 || index_2 >= this->vertex_buffer->size()) {
+            throw std::out_of_range("Index out of range");
+        }
+
+        Vertex vertex_0 = this->vertex_buffer->at(index_0);
+        Vertex vertex_1 = this->vertex_buffer->at(index_1);
+        Vertex vertex_2 = this->vertex_buffer->at(index_2);
+
+        this->runVertexShader(vertex_0);
+        this->runVertexShader(vertex_1);
+        this->runVertexShader(vertex_2);
+
+        Tri tri(vertex_0, vertex_1, vertex_2);
+
+        tris.push_back(tri);
+    }
+
+    for (Tri& tri : tris) {
+        // draw tri using barycentric algorithm
+        
+        float x0 = tri.vertex_0.position.x * (dimensions.x - 1);
+        float x1 = tri.vertex_1.position.x * (dimensions.x - 1);
+        float x2 = tri.vertex_2.position.x * (dimensions.x - 1);
+        float y0 = tri.vertex_0.position.y * (dimensions.y - 1);
+        float y1 = tri.vertex_1.position.y * (dimensions.y - 1);
+        float y2 = tri.vertex_2.position.y * (dimensions.y - 1);
+
+        float denominator = ((y1 - y2) * (x0 - x2)) + ((x2 - x1) * (y0 - y2));
+        
+        for (uint32_t x = 0; x < dimensions.x; ++x) {
+            for (uint32_t y = 0; y < dimensions.y; ++y) {
+                float b0 = (((y1 - y2) * (x - x2)) + ((x2 - x1) * (y - y2))) / denominator;
+                float b1 = (((y2 - y0) * (x - x2)) + ((x0 - x2) * (y - y2))) / denominator;
+                float b2 = 1 - b0 - b1;
+
+                if (b0 >= 0.0f && b0 <= 1.0f && b1 >= 0.0f && b1 <= 1.0f && b2 >= 0.0f && b2 <= 1.0f) {
+                    Fragment& fragment = this->frame_buffer->getDepthBuffer()->get(Vector2u(x, y));
+                    fragment.primitive = static_cast<Primitive*>(&tri);
+                    fragment.b0 = b0;
+                    fragment.b1 = b1;
+                    fragment.b2 = b2;
+                }
             }
         }
     }
@@ -199,13 +281,23 @@ void Renderer::runFragmentShader(Vector2u in_fragment_position, Fragment in_frag
     this->shader->in_fragment_depth = in_fragment.depth;
     this->shader->out_fragment_color = Vector4f();
     this->shader->varying_vertex_color = Vector4f();
+
     if (in_fragment.primitive) {
-        Line* line = static_cast<Line*>(in_fragment.primitive);
-        this->shader->varying_vertex_color.r = std::lerp(line->vertex_0.color.r, line->vertex_1.color.r, in_fragment.t);
-        this->shader->varying_vertex_color.g = std::lerp(line->vertex_0.color.g, line->vertex_1.color.g, in_fragment.t);
-        this->shader->varying_vertex_color.b = std::lerp(line->vertex_0.color.b, line->vertex_1.color.b, in_fragment.t);
-        this->shader->varying_vertex_color.a = std::lerp(line->vertex_0.color.a, line->vertex_1.color.a, in_fragment.t);
+        if (in_fragment.primitive->type == PrimitiveType::LINE) {
+            Line* line = static_cast<Line*>(in_fragment.primitive);
+            this->shader->varying_vertex_color.r = std::lerp(line->vertex_0.color.r, line->vertex_1.color.r, in_fragment.t);
+            this->shader->varying_vertex_color.g = std::lerp(line->vertex_0.color.g, line->vertex_1.color.g, in_fragment.t);
+            this->shader->varying_vertex_color.b = std::lerp(line->vertex_0.color.b, line->vertex_1.color.b, in_fragment.t);
+            this->shader->varying_vertex_color.a = std::lerp(line->vertex_0.color.a, line->vertex_1.color.a, in_fragment.t);
+        } else if (in_fragment.primitive->type == PrimitiveType::TRI) {
+            Tri* tri = static_cast<Tri*>(in_fragment.primitive);
+            this->shader->varying_vertex_color.r = (tri->vertex_0.color.r * in_fragment.b0) + (tri->vertex_1.color.r * in_fragment.b1) + (tri->vertex_2.color.r * in_fragment.b2);
+            this->shader->varying_vertex_color.g = (tri->vertex_0.color.g * in_fragment.b0) + (tri->vertex_1.color.g * in_fragment.b1) + (tri->vertex_2.color.g * in_fragment.b2);
+            this->shader->varying_vertex_color.b = (tri->vertex_0.color.b * in_fragment.b0) + (tri->vertex_1.color.b * in_fragment.b1) + (tri->vertex_2.color.b * in_fragment.b2);
+            this->shader->varying_vertex_color.a = (tri->vertex_0.color.a * in_fragment.b0) + (tri->vertex_1.color.a * in_fragment.b1) + (tri->vertex_2.color.a * in_fragment.b2);    
+        }
     }
+
     this->shader->runFragment();
 }
 
